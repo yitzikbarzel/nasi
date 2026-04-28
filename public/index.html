@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>נשיא — משחק קלפים</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(ellipse at top, #1d4f3d 0%, #0a1f15 100%);
+    color: #f4f1e8;
+    overflow-x: hidden;
+  }
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    outline: none;
+  }
+  input {
+    font-family: inherit;
+    outline: none;
+  }
+  .screen { display: none; min-height: 100vh; padding: 20px; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ------- HOME SCREEN ------- */
+  #screen-home {
+    align-items: center;
+    justify-content: center;
+  }
+  .home-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .home-card h1 {
+    font-size: 36px;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #ffd966;
+    letter-spacing: 2px;
+  }
+  .home-card .subtitle {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #aaa;
+    font-size: 14px;
+  }
+  .form-group { margin-bottom: 20px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 6px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 16px;
+  }
+  .form-group input:focus {
+    border-color: #ffd966;
+    background: rgba(255,255,255,0.08);
+  }
+  .btn {
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: transform 0.05s, background 0.15s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: #ffd966;
+    color: #1a1a1a;
+    width: 100%;
+  }
+  .btn-primary:hover { background: #ffe085; }
+  .btn-primary:disabled {
+    background: #555;
+    color: #888;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+  .btn-danger {
+    background: #d9534f;
+    color: #fff;
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+  .divider {
+    text-align: center;
+    color: #777;
+    margin: 20px 0;
+    font-size: 12px;
+    letter-spacing: 1px;
+    position: relative;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+  .room-input { text-transform: uppercase; letter-spacing: 4px; text-align: center; font-weight: 700; }
+
+  /* ------- LOBBY SCREEN ------- */
+  #screen-lobby {
+    align-items: center;
+    justify-content: center;
+  }
+  .lobby-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .lobby-code {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .lobby-code .label {
+    color: #aaa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .lobby-code .code {
+    font-size: 56px;
+    font-weight: 700;
+    color: #ffd966;
+    letter-spacing: 8px;
+    margin: 8px 0;
+    font-family: 'Courier New', monospace;
+  }
+  .player-list {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 20px;
+    min-height: 180px;
+  }
+  .player-list h3 {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .player-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+  .player-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-right: 10px;
+  }
+  .player-dot.disconnected { background: #888; }
+  .player-name { flex: 1; }
+  .player-tag {
+    font-size: 11px;
+    background: #ffd966;
+    color: #1a1a1a;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  /* ------- GAME SCREEN ------- */
+  #screen-game {
+    padding: 12px;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    margin-bottom: 6px;
+  }
+  .game-header .room-tag {
+    font-size: 12px;
+    color: #aaa;
+    letter-spacing: 1px;
+  }
+  .game-header .room-tag .code-val {
+    color: #ffd966;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .opponents {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0;
+    margin-bottom: 8px;
+  }
+  .opponent {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 130px;
+    flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .opponent.current {
+    border-color: #ffd966;
+    background: rgba(255,217,102,0.12);
+    box-shadow: 0 0 0 2px rgba(255,217,102,0.3);
+  }
+  .opponent.finished {
+    opacity: 0.55;
+  }
+  .opponent .op-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+  .opponent .op-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-right: 6px;
+  }
+  .opponent .op-dot.disconnected { background: #888; }
+  .opponent .op-info {
+    font-size: 12px;
+    color: #aaa;
+  }
+  .opponent .op-badge {
+    margin-top: 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .badge-pass { background: #d9534f; color: #fff; }
+  .badge-finish { background: #ffd966; color: #1a1a1a; }
+  .badge-turn { background: #4caf50; color: #fff; }
+
+  .pile-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    min-height: 140px;
+    position: relative;
+  }
+  .pile-info {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pile-cards {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .pile-empty {
+    color: #888;
+    font-style: italic;
+    font-size: 14px;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .status-bar.your-turn {
+    background: rgba(76,175,80,0.15);
+    border: 1px solid rgba(76,175,80,0.4);
+  }
+
+  .hand-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .hand {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 16px 8px 8px;
+    min-height: 100px;
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .actions .btn { flex: 1; padding: 14px; }
+
+  /* ------- CARD STYLING ------- */
+  .card {
+    width: 56px;
+    height: 80px;
+    background: #fff;
+    border: 1.5px solid #1a1a1a;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 6px;
+    color: #1a1a1a;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s, box-shadow 0.12s;
+    flex-shrink: 0;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    position: relative;
+    direction: ltr;
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card.selected {
+    transform: translateY(-12px);
+    border: 2.5px solid #4a90e2;
+    box-shadow: 0 6px 12px rgba(74,144,226,0.6);
+  }
+  .card.disabled {
+    cursor: default;
+    opacity: 0.85;
+  }
+  .card.disabled:hover { transform: none; }
+  .card.red { color: #d9534f; }
+  .card .corner-top {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .card .corner-bottom {
+    font-size: 14px;
+    line-height: 1;
+    text-align: right;
+    transform: rotate(180deg);
+  }
+  .card .center {
+    text-align: center;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .card-mini {
+    width: 36px;
+    height: 52px;
+    padding: 3px 4px;
+  }
+  .card-mini .corner-top, .card-mini .corner-bottom {
+    font-size: 10px;
+  }
+  .card-mini .center {
+    font-size: 14px;
+  }
+  .card-back {
+    width: 36px;
+    height: 52px;
+    background: linear-gradient(135deg, #4a90e2 0%, #2a5a9c 100%);
+    border: 1.5px solid #1a1a1a;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+  }
+
+  /* ------- END SCREEN ------- */
+  #screen-end {
+    align-items: center;
+    justify-content: center;
+  }
+  .end-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 420px;
+    width: 100%;
+  }
+  .end-card h2 {
+    text-align: center;
+    color: #ffd966;
+    margin-bottom: 20px;
+    font-size: 28px;
+  }
+  .ranking-table {
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  .ranking-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,0.05);
+  }
+  .ranking-row.first {
+    background: linear-gradient(90deg, rgba(255,217,102,0.25), rgba(255,217,102,0.05));
+    border: 1px solid rgba(255,217,102,0.4);
+  }
+  .ranking-place {
+    font-size: 22px;
+    font-weight: 700;
+    width: 50px;
+    color: #ffd966;
+  }
+  .ranking-row.first .ranking-place { font-size: 28px; }
+  .ranking-name { flex: 1; font-size: 16px; }
+
+  /* ------- TOAST ------- */
+  #toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+    max-width: 90%;
+    text-align: center;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(8px);
+  }
+  #toast.error {
+    background: rgba(180,40,40,0.9);
+    border-color: rgba(255,100,100,0.5);
+  }
+
+  /* ------- RESPONSIVE ------- */
+  @media (max-width: 600px) {
+    .card { width: 46px; height: 66px; padding: 3px 4px; }
+    .card .corner-top, .card .corner-bottom { font-size: 12px; }
+    .card .center { font-size: 18px; }
+    .opponent { min-width: 110px; padding: 8px 10px; }
+    .home-card { padding: 28px 20px; }
+    .home-card h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="screen-home" class="screen active">
+  <div class="home-card">
+    <h1>נשיא</h1>
+    <div class="subtitle">משחק קלפים מרובה משתתפים</div>
+    <div class="form-group">
+      <label for="home-name">השם שלך</label>
+      <input id="home-name" type="text" placeholder="הכנס את שמך" maxlength="24" autocomplete="off">
+    </div>
+    <button id="btn-create" class="btn btn-primary">צור חדר</button>
+    <div class="divider">או</div>
+    <div class="form-group">
+      <label for="home-code">קוד חדר</label>
+      <input id="home-code" type="text" class="room-input" placeholder="XXXX" maxlength="4" autocomplete="off" dir="ltr">
+    </div>
+    <button id="btn-join" class="btn btn-secondary" style="width:100%">הצטרף לחדר</button>
+  </div>
+</div>
+
+<div id="screen-lobby" class="screen">
+  <div class="lobby-card">
+    <div class="lobby-code">
+      <div class="label">קוד חדר</div>
+      <div class="code" id="lobby-code" dir="ltr">----</div>
+      <button id="btn-copy-link" class="btn btn-secondary">העתק קישור הזמנה</button>
+    </div>
+    <div class="player-list">
+      <h3>שחקנים (<span id="lobby-count">0</span>/6)</h3>
+      <div id="lobby-players"></div>
+    </div>
+    <button id="btn-start" class="btn btn-primary" disabled>התחל משחק</button>
+    <button id="btn-leave-lobby" class="btn btn-secondary" style="width:100%; margin-top:10px">יציאה</button>
+  </div>
+</div>
+
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="room-tag">חדר<span class="code-val" id="game-room-code" dir="ltr">----</span></div>
+    <button id="btn-leave-game" class="btn btn-secondary" style="padding:6px 12px; font-size:12px">יציאה</button>
+  </div>
+  <div class="opponents" id="opponents"></div>
+  <div class="pile-area">
+    <div class="pile-info" id="pile-info">ממתין...</div>
+    <div class="pile-cards" id="pile-cards"></div>
+  </div>
+  <div class="status-bar" id="status-bar">
+    <span id="status-text">—</span>
+    <span id="status-info"></span>
+  </div>
+  <div class="hand-area">
+    <div class="hand" id="hand"></div>
+    <div class="actions">
+      <button id="btn-play" class="btn btn-primary" disabled>שחק</button>
+      <button id="btn-pass" class="btn btn-secondary" disabled>פס</button>
+      <button id="btn-clear" class="btn btn-secondary">נקה</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-end" class="screen">
+  <div class="end-card">
+    <h2>המשחק הסתיים</h2>
+    <div class="ranking-table" id="rankings"></div>
+    <button id="btn-play-again" class="btn btn-primary" style="display:none">שחק שוב</button>
+    <button id="btn-back-home" class="btn btn-secondary" style="width:100%; margin-top:10px">חזרה לדף הבית</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+  const socket = io();
+  const state = {
+    myId: null,
+    myName: localStorage.getItem('nasi_name') || '',
+    roomId: null,
+    room: null,
+    selectedCards: [],
+    lastSeenActionId: 0
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const screens = ['home', 'lobby', 'game', 'end'];
+  function showScreen(name) {
+    screens.forEach(s => $(`screen-${s}`).classList.toggle('active', s === name));
+  }
+
+  let toastTimer;
+  function showToast(message, isError = false) {
+    const t = $('toast');
+    t.textContent = message;
+    t.classList.toggle('error', !!isError);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function cardEl(card, opts = {}) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    if (opts.mini) el.classList.add('card-mini');
+    if (card.suit === '♥' || card.suit === '♦') el.classList.add('red');
+    if (opts.selected) el.classList.add('selected');
+    if (opts.disabled) el.classList.add('disabled');
+    const top = document.createElement('div');
+    top.className = 'corner-top';
+    top.textContent = card.rank + card.suit;
+    const center = document.createElement('div');
+    center.className = 'center';
+    center.textContent = card.suit;
+    const bottom = document.createElement('div');
+    bottom.className = 'corner-bottom';
+    bottom.textContent = card.rank + card.suit;
+    el.append(top, center, bottom);
+    return el;
+  }
+
+  function cardKey(c) { return `${c.rank}|${c.suit}`; }
+
+  function isSelected(card) {
+    return state.selectedCards.some(c => cardKey(c) === cardKey(card));
+  }
+
+  function toggleSelect(card) {
+    const k = cardKey(card);
+    const i = state.selectedCards.findIndex(c => cardKey(c) === k);
+    if (i === -1) state.selectedCards.push(card);
+    else state.selectedCards.splice(i, 1);
+  }
+
+  /* ---- HOME ---- */
+  function initHome() {
+    const nameInput = $('home-name');
+    const codeInput = $('home-code');
+    nameInput.value = state.myName;
+
+    const params = new URLSearchParams(location.search);
+    const roomFromUrl = (params.get('room') || '').toUpperCase().trim();
+    if (roomFromUrl) {
+      codeInput.value = roomFromUrl;
+      setTimeout(() => nameInput.focus(), 50);
+    }
+
+    codeInput.addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    });
+
+    $('btn-create').addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      if (!name) return showToast('אנא הכנס את שמך', true);
+      $('btn-create').disabled = true;
+      try {
+        const r = await fetch('/room/create', { method: 'POST' });
+        const data = await r.json();
+        state.myName = name;
+        localStorage.setItem('nasi_name', name);
+        joinRoom(data.roomId, name);
+      } catch (e) {
+        showToast('יצירת החדר נכשלה', true);
+        $('btn-create').disabled = false;
+      }
+    });
+
+    $('btn-join').addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      const code = codeInput.value.trim().toUpperCase();
+      if (!name) return showToast('אנא הכנס את שמך', true);
+      if (code.length !== 4) return showToast('קוד החדר חייב להיות בן 4 תווים', true);
+      state.myName = name;
+      localStorage.setItem('nasi_name', name);
+      joinRoom(code, name);
+    });
+
+    if (roomFromUrl && state.myName) {
+      // Auto-rejoin attempt — but require user to click join
+    }
+  }
+
+  function joinRoom(roomId, playerName) {
+    state.roomId = roomId;
+    state.myName = playerName;
+    state.selectedCards = [];
+    state.lastSeenActionId = 0;
+    socket.emit('join_room', { roomId, playerName });
+    history.replaceState({}, '', `?room=${roomId}`);
+  }
+
+  /* ---- LOBBY ---- */
+  function renderLobby() {
+    const room = state.room;
+    if (!room) return;
+    $('lobby-code').textContent = room.id;
+    $('game-room-code').textContent = room.id;
+    $('lobby-count').textContent = room.players.length;
+    const list = $('lobby-players');
+    list.innerHTML = '';
+    room.players.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      const dot = document.createElement('div');
+      dot.className = 'player-dot' + (p.connected ? '' : ' disconnected');
+      const name = document.createElement('div');
+      name.className = 'player-name';
+      name.textContent = p.name + (p.id === state.myId ? ' (אתה)' : '');
+      row.append(dot, name);
+      if (p.id === room.creatorId) {
+        const tag = document.createElement('div');
+        tag.className = 'player-tag';
+        tag.textContent = 'מארח';
+        row.append(tag);
+      }
+      list.append(row);
+    });
+    const isCreator = room.creatorId === state.myId;
+    const startBtn = $('btn-start');
+    startBtn.style.display = isCreator ? 'block' : 'none';
+    startBtn.disabled = room.players.length < 2;
+  }
+
+  function initLobby() {
+    $('btn-copy-link').addEventListener('click', () => {
+      const url = `${location.origin}/?room=${state.roomId}`;
+      navigator.clipboard.writeText(url).then(
+        () => showToast('קישור ההזמנה הועתק!'),
+        () => {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          document.body.append(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+          showToast('קישור ההזמנה הועתק!');
+        }
+      );
+    });
+    $('btn-start').addEventListener('click', () => {
+      socket.emit('start_game', { roomId: state.roomId });
+    });
+    $('btn-leave-lobby').addEventListener('click', leaveRoom);
+  }
+
+  /* ---- GAME ---- */
+  function renderGame() {
+    const room = state.room;
+    if (!room) return;
+    const me = room.players.find(p => p.id === state.myId);
+    const myIdx = room.players.findIndex(p => p.id === state.myId);
+    const isMyTurn = room.currentPlayerIndex === myIdx && !!me && me.finishRank === null;
+
+    const opponentsEl = $('opponents');
+    opponentsEl.innerHTML = '';
+    const ordered = [];
+    for (let i = 1; i < room.players.length; i++) {
+      ordered.push(room.players[(myIdx + i) % room.players.length]);
+    }
+    ordered.forEach(p => {
+      const op = document.createElement('div');
+      op.className = 'opponent';
+      const isCurrent = room.players[room.currentPlayerIndex].id === p.id;
+      if (isCurrent && p.finishRank === null) op.classList.add('current');
+      if (p.finishRank !== null) op.classList.add('finished');
+
+      const name = document.createElement('div');
+      name.className = 'op-name';
+      const dot = document.createElement('span');
+      dot.className = 'op-dot' + (p.connected ? '' : ' disconnected');
+      name.append(dot, document.createTextNode(p.name));
+      op.append(name);
+
+      const info = document.createElement('div');
+      info.className = 'op-info';
+      info.textContent = `${p.cardCount} קלפים`;
+      op.append(info);
+
+      if (p.finishRank !== null) {
+        const badge = document.createElement('span');
+        badge.className = 'op-badge badge-finish';
+        badge.textContent = `#${p.finishRank}`;
+        op.append(badge);
+      } else if (p.passed) {
+        const badge = document.createElement('span');
+        badge.className = 'op-badge badge-pass';
+        badge.textContent = 'פס';
+        op.append(badge);
+      } else if (isCurrent) {
+        const badge = document.createElement('span');
+        badge.className = 'op-badge badge-turn';
+        badge.textContent = 'תור';
+        op.append(badge);
+      }
+      opponentsEl.append(op);
+    });
+
+    const pileInfo = $('pile-info');
+    const pileCards = $('pile-cards');
+    pileCards.innerHTML = '';
+    if (room.pile && room.pile.length) {
+      pileInfo.textContent = `${room.pileCount} קלפים בסט בסיבוב הזה`;
+      room.pile.forEach(c => pileCards.append(cardEl(c, { disabled: true })));
+    } else {
+      pileInfo.textContent = 'סיבוב חדש — פתח עם קלפים כלשהם';
+      const empty = document.createElement('div');
+      empty.className = 'pile-empty';
+      empty.textContent = '— הערימה התנקתה —';
+      pileCards.append(empty);
+    }
+
+    const statusBar = $('status-bar');
+    const statusText = $('status-text');
+    const statusInfo = $('status-info');
+    const cur = room.players[room.currentPlayerIndex];
+    statusBar.classList.toggle('your-turn', isMyTurn);
+    if (me && me.finishRank !== null) {
+      statusText.textContent = `סיימת במקום #${me.finishRank} — צופה בשאר`;
+    } else if (isMyTurn) {
+      statusText.textContent = 'התור שלך';
+    } else {
+      statusText.textContent = `התור של ${cur ? cur.name : '—'}`;
+    }
+    statusInfo.textContent = me ? `${me.cardCount} קלפים ביד` : '';
+
+    const handEl = $('hand');
+    handEl.innerHTML = '';
+    if (me && Array.isArray(me.hand)) {
+      me.hand.forEach(card => {
+        const el = cardEl(card, { selected: isSelected(card), disabled: !isMyTurn });
+        if (isMyTurn) {
+          el.addEventListener('click', () => {
+            toggleSelect(card);
+            renderGame();
+          });
+        }
+        handEl.append(el);
+      });
+    }
+
+    const playBtn = $('btn-play');
+    const passBtn = $('btn-pass');
+    let canPlay = false;
+    if (isMyTurn && state.selectedCards.length > 0) {
+      const sameRank = state.selectedCards.every(c => c.rank === state.selectedCards[0].rank);
+      const countOk = room.pileCount === 0 || state.selectedCards.length === room.pileCount;
+      const minVal = Math.min(...state.selectedCards.map(c => c.value));
+      const valOk = room.pileCount === 0 || minVal >= room.pileMinValue;
+      canPlay = sameRank && countOk && valOk;
+    }
+    playBtn.disabled = !canPlay;
+    passBtn.disabled = !isMyTurn || room.pileCount === 0;
+  }
+
+  function initGame() {
+    $('btn-play').addEventListener('click', () => {
+      if (!state.selectedCards.length) return;
+      socket.emit('play_cards', {
+        roomId: state.roomId,
+        cards: state.selectedCards.map(c => ({ rank: c.rank, suit: c.suit, value: c.value }))
+      });
+      state.selectedCards = [];
+    });
+    $('btn-pass').addEventListener('click', () => {
+      socket.emit('pass', { roomId: state.roomId });
+      state.selectedCards = [];
+    });
+    $('btn-clear').addEventListener('click', () => {
+      state.selectedCards = [];
+      renderGame();
+    });
+    $('btn-leave-game').addEventListener('click', () => {
+      if (confirm('לצאת מהמשחק? תוסר ממנו.')) leaveRoom();
+    });
+  }
+
+  /* ---- END ---- */
+  function renderEnd(rankings) {
+    const tbl = $('rankings');
+    tbl.innerHTML = '';
+    rankings.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'ranking-row' + (r.place === 1 ? ' first' : '');
+      const place = document.createElement('div');
+      place.className = 'ranking-place';
+      place.textContent = `#${r.place}`;
+      const name = document.createElement('div');
+      name.className = 'ranking-name';
+      name.textContent = r.name + (r.place === 1 ? ' 👑' : '');
+      row.append(place, name);
+      tbl.append(row);
+    });
+    const isCreator = state.room && state.room.creatorId === state.myId;
+    $('btn-play-again').style.display = isCreator ? 'block' : 'none';
+  }
+
+  function initEnd() {
+    $('btn-play-again').addEventListener('click', () => {
+      socket.emit('play_again', { roomId: state.roomId });
+    });
+    $('btn-back-home').addEventListener('click', leaveRoom);
+  }
+
+  function leaveRoom() {
+    state.roomId = null;
+    state.room = null;
+    state.selectedCards = [];
+    history.replaceState({}, '', '/');
+    socket.disconnect();
+    setTimeout(() => { socket.connect(); }, 100);
+    showScreen('home');
+    $('btn-create').disabled = false;
+  }
+
+  function handleAction(action) {
+    if (!action || action.id <= state.lastSeenActionId) return;
+    state.lastSeenActionId = action.id;
+    let msg = '';
+    if (action.type === 'play') {
+      const cardStr = action.cards.map(c => c.rank + c.suit).join(' ');
+      msg = `${action.playerName} שיחק ${cardStr}`;
+    } else if (action.type === 'pass') {
+      msg = `${action.playerName} עשה פס`;
+    } else if (action.type === 'auto-pass') {
+      msg = `${action.playerName} (לא מחובר) פס אוטומטי`;
+    } else if (action.type === 'clear') {
+      msg = `הערימה התנקתה — ${action.leadPlayerName} פותח`;
+    } else if (action.type === 'finish') {
+      msg = `${action.playerName} סיים במקום #${action.place}!`;
+    } else if (action.type === 'timeout') {
+      msg = `${action.playerName} הוסר עקב ניתוק`;
+    } else if (action.type === 'start') {
+      msg = `המשחק החל — ${action.playerName} מתחיל`;
+    }
+    if (msg) showToast(msg);
+  }
+
+  /* ---- SOCKET EVENTS ---- */
+  socket.on('connect', () => {
+    state.myId = socket.id;
+    if (state.roomId && state.myName) {
+      socket.emit('join_room', { roomId: state.roomId, playerName: state.myName });
+    }
+  });
+
+  socket.on('room_update', (room) => {
+    state.room = room;
+    state.myId = socket.id;
+    if (room.lastAction) handleAction(room.lastAction);
+    if (room.state === 'lobby') {
+      renderLobby();
+      showScreen('lobby');
+    } else if (room.state === 'playing') {
+      renderGame();
+      showScreen('game');
+    } else if (room.state === 'finished') {
+      // Wait for game_over event for rankings, but show end screen too
+    }
+  });
+
+  socket.on('game_over', ({ rankings }) => {
+    renderEnd(rankings);
+    showScreen('end');
+  });
+
+  socket.on('error', ({ message }) => {
+    showToast(message || 'שגיאה', true);
+    if (message === 'החדר לא נמצא' || message === 'המשחק כבר התחיל' || message === 'החדר מלא') {
+      leaveRoom();
+    }
+  });
+
+  socket.on('disconnect', () => {
+    // Will auto-reconnect via socket.io. The connect handler will rejoin.
+  });
+
+  /* ---- INIT ---- */
+  initHome();
+  initLobby();
+  initGame();
+  initEnd();
+  showScreen('home');
+})();
+</script>
+</body>
+</html>
