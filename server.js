@@ -415,6 +415,7 @@ io.on('connection', (socket) => {
       }
       socket.join(roomId);
       broadcastRoomUpdate(room);
+      socket.emit('chat_history', room.chatHistory || []);
       checkAutoAdvance(room);
       return;
     }
@@ -440,6 +441,7 @@ io.on('connection', (socket) => {
     socket.data.playerName = playerName;
     socket.join(roomId);
     broadcastRoomUpdate(room);
+    socket.emit('chat_history', room.chatHistory || []);
   });
 
   socket.on('start_game', ({ roomId, mushiMode }) => {
@@ -512,6 +514,22 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(room);
   });
 
+  socket.on('chat_message', ({ roomId, text }) => {
+    if (!roomId) return;
+    roomId = String(roomId).toUpperCase().trim();
+    const room = rooms[roomId];
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    text = String(text || '').trim().slice(0, 200);
+    if (!text) return;
+    const msg = { playerName: player.name, text, time: Date.now() };
+    room.chatHistory.push(msg);
+    if (room.chatHistory.length > 100) room.chatHistory.shift();
+    room.lastActivity = Date.now();
+    io.to(roomId).emit('chat_message', msg);
+  });
+
   socket.on('disconnect', () => {
     const { roomId, playerName } = socket.data;
     if (!roomId || !playerName) return;
@@ -569,7 +587,8 @@ app.post('/room/create', (req, res) => {
     bottomFinishers: 0,
     lastAction: null,
     actionCounter: 0,
-    mushiMode: false
+    mushiMode: false,
+    chatHistory: []
   };
   res.json({ roomId: id });
 });
