@@ -98,8 +98,14 @@ function broadcastGameOver(room) {
     .filter(p => p.finishRank !== null)
     .sort((a, b) => a.finishRank - b.finishRank)
     .map(p => ({ name: p.name, place: p.finishRank }));
+  const lastPlayer = room.lastPlayerId ? room.players.find(p => p.id === room.lastPlayerId) : null;
+  const payload = {
+    rankings,
+    lastPile: Array.isArray(room.pile) ? room.pile.map(c => ({ ...c })) : [],
+    lastPlayerName: lastPlayer ? lastPlayer.name : null
+  };
   for (const p of room.players) {
-    if (p.connected) io.to(p.id).emit('game_over', { rankings });
+    if (p.connected) io.to(p.id).emit('game_over', payload);
   }
 }
 

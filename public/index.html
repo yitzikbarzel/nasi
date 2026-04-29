@@ -200,8 +200,7 @@
   /* ------- GAME SCREEN ------- */
   #screen-game {
     padding: 12px;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
   }
   .game-header {
     display: flex;
@@ -628,14 +627,63 @@
     color: #ffd966 !important;
   }
 
+  /* ------- LAST PLAY (END SCREEN) ------- */
+  .last-play-section {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .last-play-label {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
+  .last-play-cards {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
   /* ------- RESPONSIVE ------- */
   @media (max-width: 600px) {
-    .card { width: 46px; height: 66px; padding: 3px 4px; }
-    .card .corner-top, .card .corner-bottom { font-size: 12px; }
-    .card .center { font-size: 18px; }
-    .opponent { min-width: 110px; padding: 8px 10px; }
-    .home-card { padding: 28px 20px; }
+    .card { width: 44px; height: 62px; padding: 3px 4px; }
+    .card .corner-top, .card .corner-bottom { font-size: 11px; }
+    .card .center { font-size: 16px; }
+    .opponent { min-width: 100px; padding: 6px 8px; }
+    .opponent .op-name { font-size: 12px; }
+    .opponent .op-info { font-size: 11px; }
+    .home-card { padding: 24px 16px; }
     .home-card h1 { font-size: 28px; }
+    .lobby-card { padding: 20px 16px; }
+    .lobby-code .code { font-size: 44px; letter-spacing: 6px; }
+    #screen-game { padding: 8px; }
+    .game-header { flex-wrap: wrap; gap: 6px; padding: 2px 4px; margin-bottom: 4px; }
+    .room-tag { font-size: 11px; }
+    .header-actions { gap: 4px; }
+    .header-actions .btn { padding: 4px 8px; font-size: 11px; }
+    .btn-icon-sm { width: 28px; height: 28px; font-size: 12px !important; }
+    .opponents { gap: 6px; padding: 2px 0; margin-bottom: 6px; }
+    .pile-area { min-height: 110px; padding: 8px; margin-bottom: 6px; }
+    .status-bar { padding: 6px 10px; font-size: 13px; margin-bottom: 6px; }
+    .actions { padding: 4px; gap: 6px; }
+    .actions .btn { padding: 12px 8px; font-size: 14px; }
+    .hand { padding: 12px 4px 6px; gap: 2px; min-height: 80px; }
+    .end-card { padding: 22px 18px; }
+    .modal-content { padding: 20px 18px; }
+    .modal-content h2 { font-size: 22px; }
+  }
+  @media (max-width: 380px) {
+    .card { width: 38px; height: 54px; padding: 2px 3px; }
+    .card .corner-top, .card .corner-bottom { font-size: 10px; }
+    .card .center { font-size: 13px; }
+    .opponent { min-width: 86px; padding: 5px 6px; }
+    .opponent .op-name { font-size: 11px; }
+    .opponent .op-info { font-size: 10px; }
+    .lobby-code .code { font-size: 36px; letter-spacing: 4px; }
+    .actions .btn { padding: 10px 6px; font-size: 13px; }
   }
 </style>
 </head>
@@ -718,6 +766,10 @@
 <div id="screen-end" class="screen">
   <div class="end-card">
     <h2>המשחק הסתיים</h2>
+    <div id="last-play-section" class="last-play-section" style="display:none">
+      <div class="last-play-label" id="last-play-label"></div>
+      <div class="last-play-cards" id="last-play-cards"></div>
+    </div>
     <div class="ranking-table" id="rankings"></div>
     <button id="btn-play-again" class="btn btn-primary" style="display:none">שחק שוב</button>
     <button id="btn-back-home" class="btn btn-secondary" style="width:100%; margin-top:10px">חזרה לדף הבית</button>
@@ -1102,7 +1154,19 @@
   }
 
   /* ---- END ---- */
-  function renderEnd(rankings) {
+  function renderEnd(rankings, lastPile, lastPlayerName) {
+    const section = $('last-play-section');
+    if (Array.isArray(lastPile) && lastPile.length) {
+      section.style.display = 'block';
+      $('last-play-label').textContent = lastPlayerName
+        ? `הסט האחרון ש${lastPlayerName} שיחק:`
+        : 'הסט האחרון ששוחק:';
+      const cardsEl = $('last-play-cards');
+      cardsEl.innerHTML = '';
+      lastPile.forEach(c => cardsEl.append(cardEl(c, { disabled: true })));
+    } else {
+      section.style.display = 'none';
+    }
     const tbl = $('rankings');
     tbl.innerHTML = '';
     rankings.forEach(r => {
@@ -1185,8 +1249,8 @@
     }
   });
 
-  socket.on('game_over', ({ rankings }) => {
-    renderEnd(rankings);
+  socket.on('game_over', ({ rankings, lastPile, lastPlayerName }) => {
+    renderEnd(rankings, lastPile, lastPlayerName);
     showScreen('end');
   });
 
