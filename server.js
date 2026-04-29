@@ -67,15 +67,20 @@ function sanitizeRoom(room, forPlayerId) {
     activePlayers: room.activePlayers,
     lastPlayerId: room.lastPlayerId,
     lastAction: room.lastAction || null,
-    players: room.players.map(p => ({
-      id: p.id,
-      name: p.name,
-      passed: p.passed,
-      connected: p.connected,
-      finishRank: p.finishRank,
-      cardCount: p.hand.length,
-      hand: p.id === forPlayerId ? p.hand : { cardCount: p.hand.length }
-    }))
+    mushiMode: !!room.mushiMode,
+    players: room.players.map(p => {
+      const hideForOther = p.hideCount && p.id !== forPlayerId;
+      return {
+        id: p.id,
+        name: p.name,
+        passed: p.passed,
+        connected: p.connected,
+        finishRank: p.finishRank,
+        hideCount: !!p.hideCount,
+        cardCount: hideForOther ? null : p.hand.length,
+        hand: p.id === forPlayerId ? p.hand : { cardCount: hideForOther ? null : p.hand.length }
+      };
+    })
   };
 }
 
@@ -101,9 +106,13 @@ function broadcastGameOver(room) {
 function dealCards(room) {
   const deck = shuffle(createDeck());
   const n = room.players.length;
+  const handCount = (room.mushiMode && n === 2) ? 3 : n;
   for (const p of room.players) p.hand = [];
   for (let i = 0; i < deck.length; i++) {
-    room.players[i % n].hand.push(deck[i]);
+    const target = i % handCount;
+    if (target < n) {
+      room.players[target].hand.push(deck[i]);
+    }
   }
   for (const p of room.players) {
     p.hand.sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit));
@@ -417,7 +426,8 @@ io.on('connection', (socket) => {
       hand: [],
       passed: false,
       connected: true,
-      finishRank: null
+      finishRank: null,
+      hideCount: false
     });
     if (!room.creatorId) room.creatorId = socket.id;
     socket.data.roomId = roomId;
@@ -426,7 +436,7 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(room);
   });
 
-  socket.on('start_game', ({ roomId }) => {
+  socket.on('start_game', ({ roomId, mushiMode }) => {
     if (!roomId) return;
     roomId = String(roomId).toUpperCase().trim();
     const room = rooms[roomId];
@@ -434,9 +444,21 @@ io.on('connection', (socket) => {
     if (room.creatorId !== socket.id) return socket.emit('error', { message: 'רק היוצר יכול להתחיל' });
     if (room.state !== 'lobby') return socket.emit('error', { message: 'המשחק כבר התחיל' });
     if (room.players.length < MIN_PLAYERS) return socket.emit('error', { message: `נדרשים לפחות ${MIN_PLAYERS} שחקנים` });
+    room.mushiMode = !!mushiMode && room.players.length === 2;
     startGame(room);
     broadcastRoomUpdate(room);
     checkAutoAdvance(room);
+  });
+
+  socket.on('toggle_hide_count', ({ roomId }) => {
+    if (!roomId) return;
+    roomId = String(roomId).toUpperCase().trim();
+    const room = rooms[roomId];
+    if (!room) return socket.emit('error', { message: 'החדר לא נמצא' });
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    player.hideCount = !player.hideCount;
+    broadcastRoomUpdate(room);
   });
 
   socket.on('play_cards', ({ roomId, cards }) => {
@@ -540,7 +562,8 @@ app.post('/room/create', (req, res) => {
     topFinishers: 0,
     bottomFinishers: 0,
     lastAction: null,
-    actionCounter: 0
+    actionCounter: 0,
+    mushiMode: false
   };
   res.json({ roomId: id });
 });
@@ -555,5 +578,5 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 server.listen(PORT, () => {
-  console.log(`Nasi server running on port ${PORT}`);
+  console.log(`skip server running on port ${PORT}`);
 });

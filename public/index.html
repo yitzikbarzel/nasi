@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>נשיא — משחק קלפים</title>
+<title>skip — משחק קלפים</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -489,6 +489,145 @@
     border-color: rgba(255,100,100,0.5);
   }
 
+  /* ------- HELP BUTTON / MODAL ------- */
+  .help-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: #ffd966;
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .help-btn:hover { background: rgba(255,255,255,0.18); }
+  .home-card { position: relative; }
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal.hidden { display: none; }
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+  }
+  .modal-content {
+    position: relative;
+    background: #1d3a2e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 24px 28px;
+    max-width: 540px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    color: #f4f1e8;
+    line-height: 1.55;
+  }
+  .modal-close {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .modal-content h2 {
+    color: #ffd966;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .modal-content h3 {
+    margin-top: 18px;
+    margin-bottom: 6px;
+    color: #ffd966;
+    font-size: 15px;
+  }
+  .modal-content p, .modal-content li { font-size: 14px; }
+  .modal-content ol, .modal-content ul {
+    padding-inline-start: 22px;
+    margin-bottom: 4px;
+  }
+  .modal-content li { margin-bottom: 4px; }
+  .ranks-line {
+    background: rgba(0,0,0,0.3);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    text-align: center;
+    direction: ltr;
+  }
+
+  /* ------- MUSHI ------- */
+  .mushi-option {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,217,102,0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .mushi-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #ffd966;
+  }
+  .mushi-label input { width: 16px; height: 16px; cursor: pointer; }
+  .mushi-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .mushi-tag {
+    display: inline-block;
+    margin-inline-start: 8px;
+    background: rgba(255,217,102,0.2);
+    color: #ffd966;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ------- HEADER ACTIONS ------- */
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    padding: 0 !important;
+    font-size: 14px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+  .btn-icon-sm.active {
+    background: rgba(255,217,102,0.25) !important;
+    color: #ffd966 !important;
+  }
+
   /* ------- RESPONSIVE ------- */
   @media (max-width: 600px) {
     .card { width: 46px; height: 66px; padding: 3px 4px; }
@@ -504,8 +643,9 @@
 
 <div id="screen-home" class="screen active">
   <div class="home-card">
-    <h1>נשיא</h1>
+    <h1>skip</h1>
     <div class="subtitle">משחק קלפים מרובה משתתפים</div>
+    <button id="btn-help-home" class="help-btn" type="button" title="איך לשחק?">?</button>
     <div class="form-group">
       <label for="home-name">השם שלך</label>
       <input id="home-name" type="text" placeholder="הכנס את שמך" maxlength="24" autocomplete="off">
@@ -531,15 +671,30 @@
       <h3>שחקנים (<span id="lobby-count">0</span>/6)</h3>
       <div id="lobby-players"></div>
     </div>
+    <div id="mushi-option" class="mushi-option" style="display:none">
+      <label class="mushi-label">
+        <input type="checkbox" id="chk-mushi">
+        <span>קופה של מושי</span>
+      </label>
+      <div class="mushi-hint">משחק 2 שחקנים — מחלקים ל־3 ערימות והשלישית ללא שימוש</div>
+    </div>
     <button id="btn-start" class="btn btn-primary" disabled>התחל משחק</button>
+    <button id="btn-help-lobby" class="btn btn-secondary" style="width:100%; margin-top:10px">איך לשחק?</button>
     <button id="btn-leave-lobby" class="btn btn-secondary" style="width:100%; margin-top:10px">יציאה</button>
   </div>
 </div>
 
 <div id="screen-game" class="screen">
   <div class="game-header">
-    <div class="room-tag">חדר<span class="code-val" id="game-room-code" dir="ltr">----</span></div>
-    <button id="btn-leave-game" class="btn btn-secondary" style="padding:6px 12px; font-size:12px">יציאה</button>
+    <div class="room-tag">
+      חדר<span class="code-val" id="game-room-code" dir="ltr">----</span>
+      <span id="mushi-tag" class="mushi-tag" style="display:none">קופה של מושי</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-hide-count" class="btn btn-secondary btn-icon-sm" title="הסתר/הצג ספירת קלפים שלך">👁</button>
+      <button id="btn-help-game" class="btn btn-secondary btn-icon-sm" title="איך לשחק?">?</button>
+      <button id="btn-leave-game" class="btn btn-secondary" style="padding:6px 12px; font-size:12px">יציאה</button>
+    </div>
   </div>
   <div class="opponents" id="opponents"></div>
   <div class="pile-area">
@@ -554,7 +709,7 @@
     <div class="hand" id="hand"></div>
     <div class="actions">
       <button id="btn-play" class="btn btn-primary" disabled>שחק</button>
-      <button id="btn-pass" class="btn btn-secondary" disabled>פס</button>
+      <button id="btn-pass" class="btn btn-secondary" disabled>skip</button>
       <button id="btn-clear" class="btn btn-secondary">נקה</button>
     </div>
   </div>
@@ -566,6 +721,40 @@
     <div class="ranking-table" id="rankings"></div>
     <button id="btn-play-again" class="btn btn-primary" style="display:none">שחק שוב</button>
     <button id="btn-back-home" class="btn btn-secondary" style="width:100%; margin-top:10px">חזרה לדף הבית</button>
+  </div>
+</div>
+
+<div id="help-modal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="btn-help-close" type="button">×</button>
+    <h2>איך לשחק skip</h2>
+    <h3>המטרה</h3>
+    <p>להיפטר ראשון מכל הקלפים שביד.</p>
+    <h3>סדר הדרגות (נמוך → גבוה)</h3>
+    <p class="ranks-line">3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · J · Q · K · A · 2</p>
+    <h3>איך משחקים</h3>
+    <ol>
+      <li>בתורך — שחק סט קלפים: יחיד, זוג, שלישייה או רביעייה.</li>
+      <li>הסט שלך חייב להיות באותה <b>כמות קלפים</b> ובדרגה <b>שווה או גבוהה</b> מהסט הקודם.</li>
+      <li>אם אינך יכול או לא רוצה — לחץ <b>skip</b>.</li>
+      <li>כששאר השחקנים עושים skip — הערימה מתנקה והשחקן האחרון ששיחק פותח סיבוב חדש בכל קלף שירצה.</li>
+      <li>הראשון שמסיים את היד מנצח. השאר ממשיכים לשחק על המקומות הבאים.</li>
+    </ol>
+    <h3>איך יוצרים משחק</h3>
+    <ol>
+      <li>הכנס שם ולחץ <b>צור חדר</b>.</li>
+      <li>בלובי לחץ <b>העתק קישור הזמנה</b> ושלח לחברים.</li>
+      <li>חברים פותחים את הקישור, מכניסים שם, לוחצים <b>הצטרף לחדר</b>.</li>
+      <li>כשיש לפחות 2 שחקנים — היוצר לוחץ <b>התחל משחק</b>.</li>
+    </ol>
+    <h3>איך מצטרפים למשחק</h3>
+    <p>לחץ על קישור ההזמנה <i>או</i> הכנס את קוד החדר בן 4 התווים בדף הראשי.</p>
+    <h3>אופציות נוספות</h3>
+    <ul>
+      <li><b>קופה של מושי</b> — למשחק זוגי. מחלקים ל־3 ערימות והשלישית מושלכת. ככה אף שחקן לא יודע בוודאות מה הקלפים של השני.</li>
+      <li><b>הסתרת ספירת קלפים</b> — כפתור 👁 בתוך המשחק. אחרים יראו "?" במקום מספר הקלפים שלך.</li>
+    </ul>
   </div>
 </div>
 
@@ -720,6 +909,13 @@
     const startBtn = $('btn-start');
     startBtn.style.display = isCreator ? 'block' : 'none';
     startBtn.disabled = room.players.length < 2;
+    const mushiOpt = $('mushi-option');
+    if (isCreator && room.players.length === 2) {
+      mushiOpt.style.display = 'block';
+    } else {
+      mushiOpt.style.display = 'none';
+      $('chk-mushi').checked = false;
+    }
   }
 
   function initLobby() {
@@ -739,7 +935,10 @@
       );
     });
     $('btn-start').addEventListener('click', () => {
-      socket.emit('start_game', { roomId: state.roomId });
+      socket.emit('start_game', {
+        roomId: state.roomId,
+        mushiMode: $('chk-mushi').checked
+      });
     });
     $('btn-leave-lobby').addEventListener('click', leaveRoom);
   }
@@ -751,6 +950,13 @@
     const me = room.players.find(p => p.id === state.myId);
     const myIdx = room.players.findIndex(p => p.id === state.myId);
     const isMyTurn = room.currentPlayerIndex === myIdx && !!me && me.finishRank === null;
+
+    $('mushi-tag').style.display = room.mushiMode ? 'inline-block' : 'none';
+    const hideBtn = $('btn-hide-count');
+    if (me) {
+      hideBtn.classList.toggle('active', !!me.hideCount);
+      hideBtn.textContent = me.hideCount ? '🚫' : '👁';
+    }
 
     const opponentsEl = $('opponents');
     opponentsEl.innerHTML = '';
@@ -774,7 +980,7 @@
 
       const info = document.createElement('div');
       info.className = 'op-info';
-      info.textContent = `${p.cardCount} קלפים`;
+      info.textContent = (p.cardCount === null || p.cardCount === undefined) ? '? קלפים' : `${p.cardCount} קלפים`;
       op.append(info);
 
       if (p.finishRank !== null) {
@@ -785,7 +991,7 @@
       } else if (p.passed) {
         const badge = document.createElement('span');
         badge.className = 'op-badge badge-pass';
-        badge.textContent = 'פס';
+        badge.textContent = 'skip';
         op.append(badge);
       } else if (isCurrent) {
         const badge = document.createElement('span');
@@ -873,6 +1079,26 @@
     $('btn-leave-game').addEventListener('click', () => {
       if (confirm('לצאת מהמשחק? תוסר ממנו.')) leaveRoom();
     });
+    $('btn-hide-count').addEventListener('click', () => {
+      socket.emit('toggle_hide_count', { roomId: state.roomId });
+    });
+    $('btn-help-game').addEventListener('click', () => openHelp());
+  }
+
+  function openHelp() {
+    $('help-modal').classList.remove('hidden');
+  }
+  function closeHelp() {
+    $('help-modal').classList.add('hidden');
+  }
+  function initHelp() {
+    $('btn-help-home').addEventListener('click', openHelp);
+    $('btn-help-lobby').addEventListener('click', openHelp);
+    $('btn-help-close').addEventListener('click', closeHelp);
+    document.querySelector('#help-modal .modal-backdrop').addEventListener('click', closeHelp);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeHelp();
+    });
   }
 
   /* ---- END ---- */
@@ -921,9 +1147,9 @@
       const cardStr = action.cards.map(c => c.rank + c.suit).join(' ');
       msg = `${action.playerName} שיחק ${cardStr}`;
     } else if (action.type === 'pass') {
-      msg = `${action.playerName} עשה פס`;
+      msg = `${action.playerName} עשה skip`;
     } else if (action.type === 'auto-pass') {
-      msg = `${action.playerName} (לא מחובר) פס אוטומטי`;
+      msg = `${action.playerName} (לא מחובר) skip אוטומטי`;
     } else if (action.type === 'clear') {
       msg = `הערימה התנקתה — ${action.leadPlayerName} פותח`;
     } else if (action.type === 'finish') {
@@ -980,6 +1206,7 @@
   initLobby();
   initGame();
   initEnd();
+  initHelp();
   showScreen('home');
 })();
 </script>
